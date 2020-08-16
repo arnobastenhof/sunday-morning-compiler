@@ -24,7 +24,7 @@ BUILD_PATHS = $(PATHB) $(PATHO) $(PATHH)
 
 .PHONY: all clean
 
-all: $(PATHB)oc
+all: $(PATHB)wc
 
 clean:
   -rm -rf $(BUILD_PATHS)
@@ -44,5 +44,5 @@ $(PATHO)main.o : $(PATHS)main.c $(PATHO)
 
 # executable
 
-$(PATHB)oc: $(PATHO)main.o
+$(PATHB)wc: $(PATHO)main.o
   $(CC) -o $@ $^
