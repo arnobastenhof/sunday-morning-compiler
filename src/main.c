@@ -5,7 +5,7 @@
 
 /* Various compile-time constants */
 enum {
-  kNumKw = 2,                 /* Number of keywords */
+  kNumKw = 3,                 /* Number of keywords */
   kIdLen = 11,                /* Identifier length (incl. terminating '\0') */
 };
 
@@ -16,11 +16,12 @@ typedef uint32_t symset_t;
 typedef enum {
   kNul     = 0x0,   /* Invalid character */
   kProgram = 0x1,   /* Keyword "Program" */
-  kEnd     = 0x2,   /* Keyword "End" */
-  kIdent   = 0x4,   /* Identifier */
-  kSemicln = 0x8,   /* ";" */
-  kPeriod  = 0x10,  /* "." */
-  kEof     = 0x20   /* end of file */
+  kBegin   = 0x2,   /* Keyword "Begin" */
+  kEnd     = 0x4,   /* Keyword "End" */
+  kIdent   = 0x8,   /* Identifier */
+  kSemicln = 0x10,   /* ";" */
+  kPeriod  = 0x20,  /* "." */
+  kEof     = 0x40   /* end of file */
 } symbol_t;
 
 /* Character kinds; defined not to overlap with symbols */
@@ -32,12 +33,12 @@ enum {
 
 /* Reserved words */
 const char * const g_kw[kNumKw] = {
-  "Program", "End"
+  "Begin", "End", "Program"
 };
 
 /* Keyword symbols */
 const symbol_t g_kw_sym[kNumKw] = {
-  kProgram, kEnd
+  kBegin, kEnd, kProgram
 };
 
 /* Association of (ASCII) characters with their symbol and kind */
@@ -92,7 +93,8 @@ PrintErrors(void)
     /*  0,1  */ "",                             "maximum line size exceeded",
     /*  2,3  */ "symbol deleted",               "\"Program\" inserted",
     /*  4,5  */ "identifier inserted",          "\";\" inserted",
-    /*  6,7  */ "\"End\" inserted",             "\".\" inserted",
+    /*  6,7  */ "\"Begin\" inserted",           "\"End\" inserted",
+    /*  8    */ "\".\" inserted",
   };
   int i;
 
@@ -116,6 +118,7 @@ GetChar()
   /* Time to refill the line buffer? */
   if (g_cc == g_ll) {
     assert(g_ch_traits[g_ch] & kWhite);
+    printf("      ");
 
     /* Echo each char in this line to stdout and append it to the line buffer */
     g_ll = 0;
@@ -198,8 +201,9 @@ SourceFile(void)
   Expect(kProgram, 3);
   Expect(kIdent, 4);
   Expect(kSemicln, 5);
-  Expect(kEnd, 6);
-  Expect(kPeriod, 7);
+  Expect(kBegin, 6);
+  Expect(kEnd, 7);
+  Expect(kPeriod, 8);
 
   fprintf(g_dest,
       "  mov  eax, 1\n"
