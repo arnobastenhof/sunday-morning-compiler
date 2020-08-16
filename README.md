@@ -11,6 +11,7 @@ This project is in an early stage, at present supporting only an empty
 program declaration; e.g.,
 ```
 Program foo;
+Begin
 End.
 ```
 
@@ -29,12 +30,12 @@ unzip master.zip
 ```
 To compile, type the following command from the project root,
 ```
-make build
+make all
 ```
-This creates an executable `wc` in the directory `build`. Run it by passing in
+This creates an executable `smc` in the directory `build`. Run it by passing in
 the source file as a command-line argument; e.g.,
 ```
-build/wc test.w
+build/smc test.src
 ```
 A file `out.s` will be created from which an executable may be obtained using
 `nasm` and `ld`:
