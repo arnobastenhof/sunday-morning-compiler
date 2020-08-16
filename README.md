@@ -47,5 +47,6 @@ ld out.o
 
 Some of the very next tasks I intend to work on:
 
-* Write (binary) output to a code array from which the assembly is to be
-  generated only after compilation succeeds.
+* Parse constant expressions.
+* Have the user specify a destination file as a command-line argument, writing
+  to stdout otherwise.
