@@ -246,8 +246,9 @@ main(int argc, char *argv[])
 {
   int sc = 1;
 
-  if (argc != 2) {
-    fprintf(stderr, "%s: expected one argument\n", argv[0]);
+  if (argc == 1) {
+    g_src = stdin;
+    sc = Compile();
   } else if (argc == 2) {
     if ((g_src = fopen(argv[1], "r")) != NULL) {
       sc = Compile();
@@ -257,6 +258,8 @@ main(int argc, char *argv[])
     } else {
       perror(argv[0]);
     }
+  } else {
+    fprintf(stderr, "%s: too many arguments\n", argv[0]);
   }
 
   return sc;
