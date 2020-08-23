@@ -7,11 +7,23 @@ techniques.
 
 ## Current state
 
-This project is in an early stage, at present supporting only an empty
-program declaration; e.g.,
+This project is in an early stage, at present supporting the following syntax:
+```
+letter             = "a" | ... | "z" | "A" | ... | "Z" .
+digit              = "0" | ... | "9" .
+number             = digit { digit } .
+identifier         = letter { digit | letter } .
+SourceFile         = ProgramDeclaration Block "." .
+ProgramDeclaration = "Program" identifier ";" .
+Block              = "Begin" { Expression ";" } "End" .
+Expression         = number .
+```
+E.g.,
 ```
 Program foo;
 Begin
+  42;
+  21;
 End.
 ```
 

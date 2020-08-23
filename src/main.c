@@ -97,12 +97,13 @@ PrintErrors(void)
     /*  4,5  */ "identifier inserted",          "\";\" inserted",
     /*  6,7  */ "\"Begin\" inserted",           "\"End\" inserted",
     /*  8,9  */ "\".\" inserted",               "overflow",
-    /* 10    */ "EOF inserted",
+    /* 10,11 */ "EOF inserted",                 "symbol deleted",
+    /* 12    */ "number inserted",
   };
   int i;
 
   fprintf(stderr, "  errors in source file\n  key words\n");
-  for (i = 1; i <= 10; ++i) {
+  for (i = 1; i <= 11; ++i) {
     if (g_errs & (1 << (i-1))) {
       fprintf(stderr, "%*c%2d  %s\n", 9, ' ', i, g_errmsg[i]);
     }
@@ -197,6 +198,17 @@ GetSymbol(void)
   }
 }
 
+/* Test brings the parser back in step after an unexpected lookahead symbol */
+static void
+Test(const symset_t fset)
+{
+  assert(kEof & fset);
+
+  for (; !(g_sym & fset); GetSymbol()) {
+    Error(11);
+  }
+}
+
 /* Expect tests the last read symbol against an expected value */
 static inline void
 Expect(const symbol_t exp, const int errno)
@@ -208,22 +220,66 @@ Expect(const symbol_t exp, const int errno)
   }
 }
 
+/* Expression = number . */
 static void
-SourceFile(void)
+Expression(const symset_t fset)
 {
-  fprintf(g_dest, "_start:\n");
+  Test(kNumber | fset);
+  if (g_sym == kNumber) {
+    GetSymbol();
+    fprintf(g_dest, "  mov ecx, %d\n", g_num);
+    Test(fset);
+  } else {
+    Error(12);
+  }
+}
 
-  GetSymbol();
+static void
+Block(const symset_t fset)
+{
+  /* For now we expect >= 0 expressions, each simply a number */
+  Test(kBegin | kEnd | fset);
+  Expect(kBegin, 6);
+  for (;;) {
+    Test(kNumber | kEnd | fset);
+    if (g_sym != kNumber) {
+      break;
+    }
+    Expression(kSemicln | kEnd | fset);
+    Expect(kSemicln, 5);
+  }
+  Expect(kEnd, 7);
+  Test(fset);
+}
+
+static void
+ProgramDeclaration(const symset_t fset)
+{
+  Test(kProgram | fset);
   Expect(kProgram, 3);
   Expect(kIdent, 4);
   Expect(kSemicln, 5);
-  Expect(kBegin, 6);
-  Expect(kEnd, 7);
+  Test(fset);
+}
+
+static void
+SourceFile(void)
+{
+  /* Print assembly header */
+  fprintf(g_dest, "BITS 64\n"
+    "GLOBAL _start\n"
+    "SECTION .text\n");
+
+  GetSymbol();
+  ProgramDeclaration(kBegin | kEof);
+  fprintf(g_dest, "_start:\n");
+  Block(kPeriod | kEof);
   Expect(kPeriod, 8);
   if (g_sym != kEof) {
     Error(10);
   }
 
+  /* _exit(0); */
   fprintf(g_dest,
       "  mov  eax, 1\n"
       "  mov  ebx, 0\n"
@@ -239,11 +295,6 @@ Compile(void)
 
   /* At present only writing to stdout is supported */
   g_dest = stdout;
-
-  /* Print assembly header */
-  fprintf(g_dest, "BITS 64\n"
-    "GLOBAL _start\n"
-    "SECTION .text\n");
 
   /* Compile */
   SourceFile();
