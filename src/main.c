@@ -81,7 +81,8 @@ static uint32_t g_errs = 0;     /* Encountered errors (used as a bitset) */
 static void
 Error(const int errno)
 {
-  printf(" ****%*c^%d\n", g_cc-1, ' ', errno);
+  fprintf(stderr, "     %s", g_line);
+  fprintf(stderr, " ****%*c^%d\n", g_cc-1, ' ', errno);
   g_errs |= (1 << (errno-1));
 }
 
@@ -96,13 +97,14 @@ PrintErrors(void)
     /*  4,5  */ "identifier inserted",          "\";\" inserted",
     /*  6,7  */ "\"Begin\" inserted",           "\"End\" inserted",
     /*  8,9  */ "\".\" inserted",               "overflow",
+    /* 10    */ "EOF inserted",
   };
   int i;
 
-  printf("  key words\n");
-  for (i = 1; i <= 22; ++i) {
+  fprintf(stderr, "  errors in source file\n  key words\n");
+  for (i = 1; i <= 10; ++i) {
     if (g_errs & (1 << (i-1))) {
-      printf("%*c%2d  %s\n", 9, ' ', i, g_errmsg[i]);
+      fprintf(stderr, "%*c%2d  %s\n", 9, ' ', i, g_errmsg[i]);
     }
   }
 }
@@ -119,15 +121,12 @@ GetChar()
   /* Time to refill the line buffer? */
   if (g_cc == g_ll) {
     assert(g_ch_traits[g_ch] & kWhite);
-    printf("      ");
 
-    /* Echo each char in this line to stdout and append it to the line buffer */
+    /* Append each char in this line to the line buffer */
     g_ll = 0;
     while ((ch = fgetc(g_src)) != '\n' && ch != EOF && g_ll < 80) {
-      putchar(ch);
       g_line[g_ll++] = ch;
     }
-    putchar('\n');
 
     /* Validate line length */
     if (ch != '\n' && ch != EOF && g_ll == 80) {
@@ -139,6 +138,7 @@ GetChar()
     /* Append newline or EOF and reset character count to start of line */
     assert(ch == '\n' || ch == EOF);
     g_line[g_ll++] = ch;
+    g_line[g_ll] = 0;
     g_cc = 0;
   }
 
@@ -188,6 +188,8 @@ GetSymbol(void)
       GetChar();
     }
     g_sym = kNumber;
+  } else if (g_ch == EOF) {
+    g_sym = kEof;
   } else {
     /* Lookup symbol for single character */
     g_sym = g_ch_traits[g_ch] & ~(kAlpha | kDigit | kWhite);
@@ -218,6 +220,9 @@ SourceFile(void)
   Expect(kBegin, 6);
   Expect(kEnd, 7);
   Expect(kPeriod, 8);
+  if (g_sym != kEof) {
+    Error(10);
+  }
 
   fprintf(g_dest,
       "  mov  eax, 1\n"
@@ -232,22 +237,19 @@ Compile(void)
 
   assert(g_src != NULL);
 
-  if ((g_dest = fopen("out.s", "w"))) {
-    /* Print assembly header */
-    fprintf(g_dest, "BITS 64\n"
-      "GLOBAL _start\n"
-      "SECTION .text\n");
+  /* At present only writing to stdout is supported */
+  g_dest = stdout;
 
-    /* Compile */
-    SourceFile();
-    fclose(g_dest);
-  } else {
-    perror("out.s");
-  }
+  /* Print assembly header */
+  fprintf(g_dest, "BITS 64\n"
+    "GLOBAL _start\n"
+    "SECTION .text\n");
+
+  /* Compile */
+  SourceFile();
 
   /* Check for errors */
   if ((sc = g_errs != 0)) {
-    printf("  errors in source file\n");
     PrintErrors();
   }
 

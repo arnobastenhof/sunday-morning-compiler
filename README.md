@@ -35,10 +35,11 @@ make all
 This creates an executable `smc` in the directory `build`. Run it by passing in
 the source file as a command-line argument; e.g.,
 ```
-build/smc test.src
+build/smc test.src 2>&1 1>out.s
 ```
-A file `out.s` will be created from which an executable may be obtained using
-`nasm` and `ld`:
+As for now the generated assembly is written directly to stdout, we redirected
+the latter to a file `out.s`. Presuming no errors were found in the source file,
+an executable may be obtained using
 ```
 nasm -f elf64 out.s
 ld out.o
