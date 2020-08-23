@@ -19,9 +19,10 @@ typedef enum {
   kBegin   = 0x2,   /* Keyword "Begin" */
   kEnd     = 0x4,   /* Keyword "End" */
   kIdent   = 0x8,   /* Identifier */
-  kSemicln = 0x10,   /* ";" */
-  kPeriod  = 0x20,  /* "." */
-  kEof     = 0x40   /* end of file */
+  kNumber  = 0x10,  /* Number (integer) */
+  kSemicln = 0x20,  /* ";" */
+  kPeriod  = 0x40,  /* "." */
+  kEof     = 0x80   /* end of file */
 } symbol_t;
 
 /* Character kinds; defined not to overlap with symbols */
@@ -70,6 +71,7 @@ static FILE *   g_dest;         /* Destination file */
 static int      g_ch = ' ';     /* Lookahead character */
 static symbol_t g_sym = kNul;   /* Lookahead symbol */
 static char     g_id[kIdLen];   /* Last parsed identifier */
+static int32_t  g_num;          /* Last parsed number */
 static char     g_line[81];     /* Line buffer (incl. terminating '\0') */
 static int      g_cc = 0;       /* Character count */
 static int      g_ll = 0;       /* Line length */
@@ -79,7 +81,6 @@ static uint32_t g_errs = 0;     /* Encountered errors (used as a bitset) */
 static void
 Error(const int errno)
 {
-  assert(errno >= 1 && errno <= 22);
   printf(" ****%*c^%d\n", g_cc-1, ' ', errno);
   g_errs |= (1 << (errno-1));
 }
@@ -94,7 +95,7 @@ PrintErrors(void)
     /*  2,3  */ "symbol deleted",               "\"Program\" inserted",
     /*  4,5  */ "identifier inserted",          "\";\" inserted",
     /*  6,7  */ "\"Begin\" inserted",           "\"End\" inserted",
-    /*  8    */ "\".\" inserted",
+    /*  8,9  */ "\".\" inserted",               "overflow",
   };
   int i;
 
@@ -174,6 +175,19 @@ GetSymbol(void)
     for (i = 0; i != kNumKw && strcmp(g_kw[i], g_id); ++i)
       ;
     g_sym = (i == kNumKw) ? kIdent : g_kw_sym[i];
+  } else if (g_ch_traits[g_ch] & kDigit) { /* Numbers */
+    g_num = 0;
+    while (g_ch_traits[g_ch] & kDigit) {
+      /* Guard against overflow */
+      if (g_num > (INT32_MAX - (g_ch - '0'))/10) {
+        Error(9);
+        g_num = 0;
+      } else {
+        g_num = (10 * g_num) + (g_ch - '0');
+      }
+      GetChar();
+    }
+    g_sym = kNumber;
   } else {
     /* Lookup symbol for single character */
     g_sym = g_ch_traits[g_ch] & ~(kAlpha | kDigit | kWhite);
